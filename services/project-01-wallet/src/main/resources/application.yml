@@ -1,0 +1,61 @@
+# COMMON CONFIGURATION (Shared between all profiles)
+# =======================================================
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://spring-fintech.us.auth0.com/
+          audiences: https://wallet-api
+
+---
+# =======================================================
+# DEVELOPMENT PROFILE ('dev')
+# =======================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+  # Default profile to use when none is specified
+  profiles:
+    active: dev
+
+  datasource:
+    # Connects to the local Docker container via the exposed port
+    url: jdbc:postgresql://localhost:5432/testdb
+    username: user
+    password: usr123
+
+  jpa:
+    hibernate:
+      # 'update' is default in dev to automatically apply schema changes
+      ddl-auto: update
+    # Show SQL queries in the console for easy debugging
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+---
+# ========================================================
+# PRODUCTION PROFILE ('prod')
+# ========================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    # In production, credentials should always come from secure environment variables
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      # Validate is safer for prod as it checks if the schema matches the entities
+      # without making changes, preventing accidental data loss
+      ddl-auto: validate
+  # It's better to disable this in production for performance and to avoid log clutter
+  show-sql: false

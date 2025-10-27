@@ -15,11 +15,18 @@ dependencies {
   
   implementation project(':common')
   implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+  implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
-  
-  
-	
-
+  testImplementation 'io.rest-assured:rest-assured:5.4.0'
+  testImplementation 'org.springframework.security:spring-security-test'
+  runtimeOnly 'org.postgresql:postgresql:42.7.7'
+  runtimeOnly 'com.h2database:h2:2.3.232'
+  testImplementation 'org.testcontainers:junit-jupiter:1.21.3'
+  testImplementation 'org.testcontainers:postgresql:1.19.8'
+  testImplementation 'com.auth0:java-jwt:4.4.0'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -33,4 +40,6 @@ tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
+
+
 
