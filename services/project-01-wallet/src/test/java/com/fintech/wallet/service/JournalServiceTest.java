@@ -20,8 +20,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fintech.wallet.dto.CreateJournalDto;
+import com.fintech.wallet.dto.EntryDto;
 import com.fintech.wallet.dto.EntryRequestDto;
 import com.fintech.wallet.dto.JournalDto;
+import com.fintech.wallet.dto.UpdateJournalDto;
 import com.fintech.wallet.entity.Entry;
 import com.fintech.wallet.entity.Journal;
 import com.fintech.wallet.entity.Ledger;
@@ -144,5 +146,103 @@ public class JournalServiceTest {
 		JournalDto journalDto = journalService.getJournalById(journalId);
 		
 		assertThat(journalDto).isNotNull();
+	}
+	
+	@Test
+	void testGetAllJournals_returnListOfJournalDtos() {
+		Ledger ledger = new Ledger();
+		ledger.setId(UUID.randomUUID());
+		
+		Journal journal = new Journal();
+		journal.setId(UUID.fromString(journalId));
+		journal.setDescription(description);
+		journal.setStatus("POSTED");
+		journal.setLedger(ledger);
+		journal.setCreatedAt(Instant.now());
+		journal.setUpdatedAt(Instant.now());
+		
+		when(journalRepository.findAll()).thenReturn(List.of(journal));
+		
+		LedgerAccount ledgerAccount = new LedgerAccount();
+		ledgerAccount.setId(UUID.randomUUID());
+		
+		Entry debitEntry = new Entry();
+		debitEntry.setId(UUID.randomUUID());
+		debitEntry.setAmount(new BigInteger("100"));
+		debitEntry.setDirection("DEBIT");;
+		debitEntry.setStatus("POSTED");
+		debitEntry.setLedgerAccountId(ledgerAccount);
+		debitEntry.setJournal(journal);
+		debitEntry.setCreatedAt(Instant.now());
+		debitEntry.setUpdatedAt(Instant.now());
+		
+		Entry creditEntry = new Entry();
+		creditEntry.setId(UUID.randomUUID());
+		creditEntry.setAmount(new BigInteger("100"));
+		creditEntry.setDirection("CREDIT");
+		creditEntry.setStatus("POSTED");
+		creditEntry.setLedgerAccountId(ledgerAccount);
+		creditEntry.setJournal(journal);
+		creditEntry.setCreatedAt(Instant.now());
+		creditEntry.setUpdatedAt(Instant.now());
+		
+		List<Entry> entries = new ArrayList<>();
+		entries.add(debitEntry);
+		entries.add(creditEntry);
+		
+		when(entryRepository.findByJournalId(UUID.fromString(journalId))).thenReturn(entries);
+		
+		List<JournalDto> journals = journalService.getAllJournals();
+		
+		assertThat(journals).isNotNull();
+		assertThat(journals).hasSize(1);
+		
+		JournalDto resultDto = journals.get(0);
+		assertThat(resultDto.id()).isEqualTo(journalId);
+		assertThat(resultDto.description()).isEqualTo(description);
+		assertThat(resultDto.status()).isEqualTo("POSTED");
+		assertThat(resultDto.ledgerId()).isNotNull();
+		assertThat(resultDto.createdAt()).isNotNull();
+		assertThat(resultDto.updatedAt()).isNotNull();
+		
+		assertThat(resultDto.entries()).isNotNull();
+		assertThat(resultDto.entries()).hasSize(2);
+		
+		EntryDto debitEntryDto = resultDto.entries().get(0);
+		assertThat(debitEntryDto.amount()).isEqualTo(new BigDecimal("1.00"));
+		assertThat(debitEntryDto.status()).isEqualTo("POSTED");
+		assertThat(debitEntryDto.direction()).isEqualTo("DEBIT");
+		assertThat(debitEntryDto.ledgerAccountId()).isNotNull();
+		assertThat(debitEntryDto.journalId()).isNotNull();
+		assertThat(debitEntryDto.createdAt()).isNotNull();
+		assertThat(debitEntryDto.updatedAt()).isNotNull();
+		
+		EntryDto creditEntryDto = resultDto.entries().get(1);
+		assertThat(creditEntryDto.amount()).isEqualTo(new BigDecimal("1.00"));
+		assertThat(creditEntryDto.status()).isEqualTo("POSTED");
+		assertThat(creditEntryDto.direction()).isEqualTo("CREDIT");
+		assertThat(creditEntryDto.ledgerAccountId()).isNotNull();
+		assertThat(creditEntryDto.journalId()).isNotNull();
+		assertThat(creditEntryDto.createdAt()).isNotNull();
+		assertThat(creditEntryDto.updatedAt()).isNotNull();
+	}
+	
+	@Test
+	void testUpdateJournal_returnNoContent() {
+		UpdateJournalDto updateRequest = new UpdateJournalDto("", "POSTED");
+		Ledger ledger = new Ledger();
+		
+		Journal journal = new Journal();
+		journal.setId(UUID.fromString(journalId));
+		journal.setDescription("");
+		journal.setStatus("POSTED");
+		journal.setLedger(ledger);
+		journal.setCreatedAt(Instant.now());
+		journal.setUpdatedAt(Instant.now());
+		
+		when(journalRepository.findById(UUID.fromString(journalId))).thenReturn(Optional.of(journal));
+		
+		journalService.updateJournal(journalId, updateRequest);
+		
 	}
 }

@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,6 +14,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,10 +24,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fintech.wallet.dto.CreateJournalDto;
 import com.fintech.wallet.dto.EntryRequestDto;
-
+import com.fintech.wallet.entity.Entry;
+import com.fintech.wallet.entity.Journal;
 import com.fintech.wallet.entity.Ledger;
 import com.fintech.wallet.entity.LedgerAccount;
-
+import com.fintech.wallet.repository.EntryRepository;
+import com.fintech.wallet.repository.JournalRepository;
 import com.fintech.wallet.repository.LedgerAccountRepository;
 import com.fintech.wallet.repository.LedgerRepository;
 
@@ -41,6 +45,11 @@ public class JournalIntegrationTest extends AbstractPostgresIntegrationTest {
 	@Autowired
 	private LedgerAccountRepository ledgerAccountRepository;
 	
+	@Autowired
+	private JournalRepository journalRepository;
+	
+	@Autowired
+	private EntryRepository entryRepository;
 	
 	private ObjectMapper mapper = new ObjectMapper();
 	
@@ -191,6 +200,109 @@ public class JournalIntegrationTest extends AbstractPostgresIntegrationTest {
 		.andExpect(jsonPath("$.timestamp").isNotEmpty());
 	}
 	
+	@Test
+	void testGetJournalById_returnOkAndJournalDto() throws Exception {
+		String auth0Id = "auth0|admin-123";
+		String email = "admin@example.com";
+		String scope = "admin";
+		
+		Journal journal = new Journal();
+		journal.setDescription("");
+		journal.setStatus("POSTED");
+		journal.setLedger(setUpLedger());
+		
+		Journal savedJournal = journalRepository.save(journal);
+		
+		Entry debitEntry = new Entry();
+		debitEntry.setAmount(new BigInteger("100"));
+		debitEntry.setStatus("POSTED");
+		debitEntry.setDirection("DEBIT");
+		debitEntry.setLedgerAccountId(setUpLedgerAccount());
+		debitEntry.setJournal(savedJournal);
+		
+		Entry creditEntry = new Entry();
+		creditEntry.setAmount(new BigInteger("100"));
+		creditEntry.setDirection("CREDIT");
+		creditEntry.setStatus("POSTED");
+		creditEntry.setLedgerAccountId(setUpReceiverLedgerAccount());
+		creditEntry.setJournal(savedJournal);
+		
+		List<Entry> entries = new ArrayList<>();
+		entries.add(debitEntry);
+		entries.add(creditEntry);
+		List<Entry> savedEntries = entryRepository.saveAll(entries);
+		
+		mockMvc.perform(get("/api/journals/{id}", savedJournal.getId().toString())
+				.with(jwt().jwt(builder -> builder
+						.subject(auth0Id)
+						.claim("email", email)
+						.claim("scope", scope))))
+		.andExpect(status().isOk());
+	}
+	@Test
+	void testGetAllJournal_returnOkAndJournalDto() throws Exception {
+		String auth0Id = "auth0|admin-123";
+		String email = "admin@example.com";
+		String scope = "admin";
+		
+		Journal journal = new Journal();
+		journal.setDescription("");
+		journal.setStatus("POSTED");
+		journal.setLedger(setUpLedger());
+		
+		Journal savedJournal = journalRepository.save(journal);
+		
+		Entry debitEntry = new Entry();
+		debitEntry.setAmount(new BigInteger("100"));
+		debitEntry.setStatus("POSTED");
+		debitEntry.setDirection("DEBIT");
+		debitEntry.setLedgerAccountId(setUpLedgerAccount());
+		debitEntry.setJournal(savedJournal);
+		
+		Entry creditEntry = new Entry();
+		creditEntry.setAmount(new BigInteger("100"));
+		creditEntry.setDirection("CREDIT");
+		creditEntry.setStatus("POSTED");
+		creditEntry.setLedgerAccountId(setUpReceiverLedgerAccount());
+		creditEntry.setJournal(savedJournal);
+		
+		List<Entry> entries = new ArrayList<>();
+		entries.add(debitEntry);
+		entries.add(creditEntry);
+		List<Entry> savedEntries = entryRepository.saveAll(entries);
+		
+		mockMvc.perform(get("/api/journals")
+				.with(jwt().jwt(builder -> builder
+						.subject(auth0Id)
+						.claim("email", email)
+						.claim("scope", scope))))
+		.andExpect(status().isOk())
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.[0].id").value(savedJournal.getId().toString()))
+		.andExpect(jsonPath("$.[0].description").value(savedJournal.getDescription()))
+		.andExpect(jsonPath("$.[0].status").value(savedJournal.getStatus()))
+		.andExpect(jsonPath("$.[0].ledger_id").value(savedJournal.getLedger().getId().toString()))
+		.andExpect(jsonPath("$.[0].entries", hasSize(2)))
+		.andExpect(jsonPath("$.[0].entries[0].id", is(savedEntries.get(0).getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[0].amount", closeTo(1.00, 0.0)))
+		.andExpect(jsonPath("$.[0].entries[0].status", is(savedEntries.get(0).getStatus())))
+		.andExpect(jsonPath("$.[0].entries[0].direction", is(savedEntries.get(0).getDirection())))
+		.andExpect(jsonPath("$.[0].entries[0].ledger_account_id", is(savedEntries.get(0).getLedgerAccountId().getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[0].journal_id", is(savedEntries.get(0).getJournal().getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[0].created_at", is(savedEntries.get(0).getCreatedAt().toString())))
+		.andExpect(jsonPath("$.[0].entries[0].updated_at", is(savedEntries.get(0).getUpdatedAt().toString())))
+		.andExpect(jsonPath("$.[0].entries[1].id", is(savedEntries.get(1).getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[1].amount", closeTo(1.00, 0.0)))
+		.andExpect(jsonPath("$.[0].entries[1].status", is(savedEntries.get(1).getStatus())))
+		.andExpect(jsonPath("$.[0].entries[1].direction", is(savedEntries.get(1).getDirection())))
+		.andExpect(jsonPath("$.[0].entries[1].ledger_account_id", is(savedEntries.get(1).getLedgerAccountId().getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[1].journal_id", is(savedEntries.get(1).getJournal().getId().toString())))
+		.andExpect(jsonPath("$.[0].entries[1].created_at", is(savedEntries.get(1).getCreatedAt().toString())))
+		.andExpect(jsonPath("$.[0].entries[1].updated_at", is(savedEntries.get(1).getUpdatedAt().toString())))
+		.andExpect(jsonPath("$.[0].created_at").value(savedJournal.getCreatedAt().toString()))
+		.andExpect(jsonPath("$.[0].updated_at").value(savedJournal.getUpdatedAt().toString()));
+	}
+	
 	Ledger setUpLedger() {
 		Ledger ledger = new Ledger();
 		ledger.setName("Wallet Ledger");
@@ -220,5 +332,13 @@ public class JournalIntegrationTest extends AbstractPostgresIntegrationTest {
 		ledgerAccount.setLedger(setUpLedger());
 		LedgerAccount saved = ledgerAccountRepository.save(ledgerAccount);
 		return saved;
+	}
+	
+	@AfterEach
+	void cleanUp() {
+		entryRepository.deleteAll();
+        journalRepository.deleteAll();
+        ledgerAccountRepository.deleteAll();
+        ledgerRepository.deleteAll();
 	}
 }

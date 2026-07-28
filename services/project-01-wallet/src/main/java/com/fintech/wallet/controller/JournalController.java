@@ -1,8 +1,11 @@
 package com.fintech.wallet.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fintech.wallet.dto.CreateJournalDto;
 import com.fintech.wallet.dto.JournalDto;
+import com.fintech.wallet.dto.UpdateJournalDto;
 import com.fintech.wallet.service.JournalService;
 
 @RestController
@@ -34,5 +38,17 @@ public class JournalController {
 		
 		JournalDto response = journalService.getJournalById(id);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+	
+	@GetMapping("/journals")
+	public ResponseEntity<List<JournalDto>> getAllJournals() {
+		List<JournalDto> response = journalService.getAllJournals();
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+	
+	@PatchMapping("/journals/{id}")
+	public ResponseEntity<Void> updateJournalById(@PathVariable("id") String id, @RequestBody UpdateJournalDto request) {
+		
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
 }

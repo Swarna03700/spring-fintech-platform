@@ -15,6 +15,8 @@ import com.fintech.wallet.dto.CreateLedgerRequest;
 import com.fintech.wallet.dto.LedgerDto;
 import com.fintech.wallet.service.LedgerService;
 
+import jakarta.validation.Valid;
+
 
 @RestController
 @RequestMapping("/api")
@@ -27,7 +29,7 @@ public class LedgerController {
 	}
 	
 	@PostMapping("/ledgers")
-	public ResponseEntity<LedgerDto> createLedger(@RequestBody CreateLedgerRequest request) {
+	public ResponseEntity<LedgerDto> createLedger(@Valid @RequestBody CreateLedgerRequest request) {
 		LedgerDto response = ledgerService.createLedger(request);
 		return new ResponseEntity<>(response, HttpStatus.CREATED);
 	}

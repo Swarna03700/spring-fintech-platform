@@ -144,4 +144,8 @@ public class LedgerServiceTest {
 		assertThat(updatedLedgerDto.name()).isEqualTo("Wallet Ledger");
 		assertThat(updatedLedgerDto.description()).isEqualTo("");
 	}
+	
+	void testDeleteLedgerById_returnTrue() {
+		
+	}
 }

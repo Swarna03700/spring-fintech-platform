@@ -27,8 +27,11 @@ public class SecurityConfig {
 			.authorizeHttpRequests(authorize -> authorize
 					.requestMatchers("/api/ledgers").hasAuthority("SCOPE_admin")
 					.requestMatchers("/api/ledger_accounts").hasAuthority("SCOPE_admin")
-					.requestMatchers("/api/journals").hasAuthority("SCOPE_admin")
 					.requestMatchers("/api/ledgers/{id}").hasAuthority("SCOPE_admin")
+					.requestMatchers("/api/journals").hasAuthority("SCOPE_admin")
+					.requestMatchers("/api/journals/{id}").hasAuthority("SCOPE_admin")
+					.requestMatchers("/api/ledger_entries").hasAuthority("SCOPE_admin")
+					.requestMatchers("/api/ledger_entries/{id}").hasAuthority("SCOPE_admin")
 					.requestMatchers("/admin/transactions/{transactionId}").hasAuthority("SCOPE_admin")
 					.requestMatchers("/me").authenticated()
 					.requestMatchers("/wallet").authenticated()

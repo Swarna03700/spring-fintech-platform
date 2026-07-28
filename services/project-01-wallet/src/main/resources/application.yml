@@ -25,6 +25,8 @@ spring:
     url: jdbc:postgresql://localhost:5432/testdb
     username: user
     password: usr123
+    hikari:
+      maximum-pool-size: 12
 
   jpa:
     hibernate:

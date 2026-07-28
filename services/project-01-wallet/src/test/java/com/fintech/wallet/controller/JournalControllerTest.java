@@ -3,6 +3,7 @@ package com.fintech.wallet.controller;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,7 @@ import com.fintech.wallet.dto.CreateJournalDto;
 import com.fintech.wallet.dto.EntryDto;
 import com.fintech.wallet.dto.EntryRequestDto;
 import com.fintech.wallet.dto.JournalDto;
+import com.fintech.wallet.dto.UpdateJournalDto;
 import com.fintech.wallet.exception.LedgerAccountNotFoundException;
 import com.fintech.wallet.exception.LedgerNotFoundException;
 import com.fintech.wallet.service.JournalService;
@@ -53,6 +57,7 @@ public class JournalControllerTest {
 	String entryId = "98765432-10ab-cdef-0123-456789abcdef";
 	String creditEntryId = "98765432-10ab-cdef-0123-456789abcdef";
 	String status = "POSTED";
+	Map<String, Object> metadata = new HashMap<>();
 	
 	@Test
 	void testCreateJournal_returnCreated() throws Exception {
@@ -227,6 +232,98 @@ public class JournalControllerTest {
 		.andExpect(jsonPath("$.entries[1].updated_at", is(creditEntryDto.updatedAt())))
 		.andExpect(jsonPath("$.created_at").value(journalDto.createdAt()))
 		.andExpect(jsonPath("$.updated_at").value(journalDto.updatedAt()));
+	}
+	
+	@Test
+	void testGetAllJournals_returnOkAndJournalDto() throws Exception {
+		EntryDto debitEntryDto = new EntryDto(
+				entryId, 
+				new BigDecimal("100.0"), 
+				status, 
+				"DEBIT", 
+				ledgerAccountId, 
+				journalId, 
+				Instant.now().toString(), 
+				Instant.now().toString());
+		EntryDto creditEntryDto = new EntryDto(
+				creditEntryId,
+				new BigDecimal("100.0"),
+				status,
+				"CREDIT",
+				receiverLedgerAccountId,
+				journalId,
+				Instant.now().toString(),
+				Instant.now().toString()
+				);
+		List<EntryDto> entryDtos = new ArrayList<>();
+		entryDtos.add(debitEntryDto);
+		entryDtos.add(creditEntryDto);
+
+		JournalDto journalDto =  new JournalDto(
+				journalId,
+				description,
+				status,
+				ledgerId,
+				entryDtos,
+				Instant.now().toString(),
+				Instant.now().toString()
+				);
+		List<JournalDto> allJournals = new ArrayList<>();
+		allJournals.add(journalDto);
+		
+		when(journalService.getAllJournals()).thenReturn(List.of(journalDto));
+		mockMvc.perform(get("/api/journals")
+				.with(jwt().jwt(builder -> builder
+						.subject(auth0Id)
+						.claim("email", email))))
+		.andExpect(status().isOk())
+		.andExpect(jsonPath("$").isArray())
+		.andExpect(jsonPath("$.[0].id").isNotEmpty())
+		.andExpect(jsonPath("$.[0].description").value(journalDto.description()))
+		.andExpect(jsonPath("$.[0].status").value(journalDto.status()))
+		.andExpect(jsonPath("$.[0].ledger_id").value(journalDto.ledgerId()))
+		.andExpect(jsonPath("$.[0].entries", hasSize(2)))
+		.andExpect(jsonPath("$.[0].entries[0].id", is(debitEntryDto.id())))
+		.andExpect(jsonPath("$.[0].entries[0].amount", closeTo(100.0, 0.0)))
+		.andExpect(jsonPath("$.[0].entries[0].status", is(debitEntryDto.status())))
+		.andExpect(jsonPath("$.[0].entries[0].direction", is(debitEntryDto.direction())))
+		.andExpect(jsonPath("$.[0].entries[0].ledger_account_id", is(debitEntryDto.ledgerAccountId())))
+		.andExpect(jsonPath("$.[0].entries[0].journal_id", is(debitEntryDto.journalId())))
+		.andExpect(jsonPath("$.[0].entries[0].created_at", is(debitEntryDto.createdAt())))
+		.andExpect(jsonPath("$.[0].entries[0].updated_at", is(debitEntryDto.updatedAt())))
+		.andExpect(jsonPath("$.[0].entries[1].id", is(creditEntryDto.id())))
+		.andExpect(jsonPath("$.[0].entries[1].amount", closeTo(100.0, 0.0)))
+		.andExpect(jsonPath("$.[0].entries[1].status", is(creditEntryDto.status())))
+		.andExpect(jsonPath("$.[0].entries[1].direction", is(creditEntryDto.direction())))
+		.andExpect(jsonPath("$.[0].entries[1].ledger_account_id", is(creditEntryDto.ledgerAccountId())))
+		.andExpect(jsonPath("$.[0].entries[1].journal_id", is(creditEntryDto.journalId())))
+		.andExpect(jsonPath("$.[0].entries[1].created_at", is(creditEntryDto.createdAt())))
+		.andExpect(jsonPath("$.[0].entries[1].updated_at", is(creditEntryDto.updatedAt())))
+		.andExpect(jsonPath("$.[0].created_at").value(journalDto.createdAt()))
+		.andExpect(jsonPath("$.[0].updated_at").value(journalDto.updatedAt()));
+		
+	}
+	
+	@Test
+	void testUpdateJournal_returnNoContent() throws Exception {
+		String id = "98765432-10ab-cdef-0123-456789abcdef";
+		EntryRequestDto debitEntry = new EntryRequestDto("DEBIT", new BigDecimal("1.0"), "f47ac10b-58cc-4372-a567-0e02b2c3d479");
+		EntryRequestDto creditEntry = new EntryRequestDto("CREDIT", new BigDecimal("1.0"), "98765432-10ab-cdef-0123-456789abcdef");
+		
+		List<EntryRequestDto> entryRequests = new ArrayList<>();
+		entryRequests.add(debitEntry);
+		entryRequests.add(creditEntry);
+		
+		UpdateJournalDto updateRequest = new UpdateJournalDto("", "POSTED");
+		String json = mapper.writeValueAsString(updateRequest);
+		
+		mockMvc.perform(patch("/api/journals/{id}", id)
+				.with(jwt().jwt(builder -> builder
+						.subject(auth0Id)
+						.claim("email", email)))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json))
+		.andExpect(status().isNoContent());
 	}
 	
 	CreateJournalDto setUpRequest() {

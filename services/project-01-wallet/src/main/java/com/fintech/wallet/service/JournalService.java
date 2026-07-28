@@ -12,6 +12,7 @@ import com.fintech.wallet.dto.CreateJournalDto;
 import com.fintech.wallet.dto.EntryDto;
 import com.fintech.wallet.dto.EntryRequestDto;
 import com.fintech.wallet.dto.JournalDto;
+import com.fintech.wallet.dto.UpdateJournalDto;
 import com.fintech.wallet.entity.Entry;
 import com.fintech.wallet.entity.Journal;
 import com.fintech.wallet.entity.Ledger;
@@ -131,5 +132,50 @@ public class JournalService {
 					entryDtos, 
 					journal.getCreatedAt().toString(), 
 					journal.getUpdatedAt().toString());
+	}
+	
+	public List<JournalDto> getAllJournals() {
+		List<JournalDto> allJournals = new ArrayList<>();
+		List<Journal> journals = journalRepository.findAll();
+		for(Journal journal: journals) {
+			List<Entry> entries = entryRepository.findByJournalId(journal.getId());
+			List<EntryDto> entryDtos = new ArrayList<>();
+			for(Entry entry : entries) {
+				EntryDto entryDto = new EntryDto(
+										entry.getId().toString(),
+										convertToFloatingPoint(entry.getAmount()),
+										entry.getStatus(),
+										entry.getDirection(),
+										entry.getLedgerAccountId().getId().toString(),
+										entry.getJournal().getId().toString(),
+										entry.getCreatedAt().toString(),
+										entry.getUpdatedAt().toString()
+						);
+				entryDtos.add(entryDto);
+		}
+			JournalDto journalDto = new JournalDto(
+										journal.getId().toString(),
+										journal.getDescription(),
+										journal.getStatus(),
+										journal.getLedger().getId().toString(),
+										entryDtos,
+										journal.getCreatedAt().toString(),
+										journal.getUpdatedAt().toString()
+					);
+			allJournals.add(journalDto);
+		}
+		
+		return allJournals;
+	}
+	
+	public void updateJournal(String id, UpdateJournalDto request) {
+		Journal journal = journalRepository.findById(UUID.fromString(id))
+				.orElseThrow();
+		
+		journal.setDescription(request.description());
+		journal.setStatus(request.status());
+		
+		journalRepository.save(journal);
+		
 	}
 }

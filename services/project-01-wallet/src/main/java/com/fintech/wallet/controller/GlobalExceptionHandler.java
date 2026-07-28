@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.fintech.wallet.dto.ErrorResponse;
@@ -22,18 +23,6 @@ import com.fintech.wallet.exception.WalletNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-	
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
-		String message = ex.getBindingResult().getFieldErrors().stream().map(err -> err.getField() + " "+err.getDefaultMessage()).findFirst()
-.orElse("Invalid input");
-		ErrorResponse error = new ErrorResponse(
-				"BAD_REQUEST",
-				message,
-				Instant.now()
-				);
-	return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-	}
 	
 	@ExceptionHandler(DuplicateUserException.class)
 	public ResponseEntity<ErrorResponse> handleDuplicateUser(DuplicateUserException ex) {
@@ -133,5 +122,15 @@ public class GlobalExceptionHandler {
 				Instant.now()
 				);
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+	}
+	
+	@ExceptionHandler
+	public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+		ErrorResponse error = new ErrorResponse(
+				"UNPROCESSABLE_ENTITY",
+				e.getMessage(),
+				Instant.now()
+				);
+		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
 	}
 }
